@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "simplestate"
+version = "0.1.0"
+description = "A simple stupid finite state machine."
+authors = ["panupong-puttarathamrongkul <54784627+panupong-puttarathamrongkul@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
