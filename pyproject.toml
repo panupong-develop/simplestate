@@ -1,9 +1,17 @@
 [tool.poetry]
 name = "simplestate"
-version = "0.1.2"
+version = "0.1.3"
 description = "A simple stupid finite state machine."
+license = "Apache-2.0"
 authors = ["panupong-puttarathamrongkul <54784627+panupong-puttarathamrongkul@users.noreply.github.com>"]
 readme = "README.md"
+packages = [{ include = "simplestate" }]
+repository = "https://github.com/panupong-develop/simplestate"
+homepage = "https://pypi.org/project/simplestate"
+keywords = ["finite state machine", "simplestate"]
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
