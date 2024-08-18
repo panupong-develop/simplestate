@@ -23,27 +23,21 @@ Here's a basic example of using **simplestate**:
 ```python
 from simplestate import StateMachine
 
-# Define the machine with an initial state
-m = StateMachine("loading")
-
-# Define transitions
+m = StateMachine("loading")          # Define the machine with an initial state
 m["loading"] + "error" >> "failed"   # Transition from loading to failed on "error"
 m["loading"] + "ok" >> "success"     # Transition from loading to success on "ok"
 m["?"] + "back" >> "loading"         # Any state transitions to loading on "back"
 
-# Add handlers for entering states
-m.add_callbacks({
+m.add_callbacks({                    # Add handlers for entering states
     "loading": lambda previous: print(f"{previous} >> loading"),
     "failed": lambda previous, error: print(f"{previous} >> failed: {error}"),
     "success": lambda previous: print(f"{previous} >> success"),
 })
 
-# Start the machine
-m.start()  # adjust inital state as you wish i.e. m.start(at_state="ok")
+m.start()  # Start the machine, adjust inital state by this m.start(at_state="ok")
 assert m.current == "loading"
 
-# Trigger transitions
-m.handle("error", error="Something went wrong")
+m.handle("error", error="Something went wrong")  # Trigger transitions
 assert m.current == "failed"
 
 m.handle("back")
@@ -52,7 +46,7 @@ assert m.current == "loading"
 
 ## Why Simplestate?
 
-The goal of **simplestate** is to keep finite state machines simple and focused. By eliminating complex event systems, you can easily manage states and transitions while keeping the code testable and maintainable. 
+The goal of **simplestate** is to keep finite state machines simple and focused. By eliminating complex event systems, you can easily manage states and transitions while keeping the code testable and maintainable.
 
 ### Event Handling on State Entry
 
@@ -77,18 +71,18 @@ A: Yes! Think of simplestate as a state manager. You can compose it within your 
 ```python
 class TrafficLight:
     def __init__(self):
-        brain = Stateachine("red")
-        ["red"] + "next" >> "yellow_green"
-        m["yellow_green"] + "next" >> "green"
-        m["green"] + "next" >> "yellow_red"
-        m["yellow_red"] + "next" >> "red"
-        m.start("red")
+        brain = StateMachine("red")
+        brain["red"] + "next" >> "yellow_green"
+        brain["yellow_green"] + "next" >> "green"
+        brain["green"] + "next" >> "yellow_red"
+        brain["yellow_red"] + "next" >> "red"
+        brain.start("red")
 
-        self.machine = m
-    
+        self.machine = brain
+
     def display(self) -> str:
         return self.machine.current
-    
+
     def next(self) -> None:
         self.machine.handle("next")
 ```
@@ -105,6 +99,7 @@ poetry run pytest
 ## Contribution
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
+
 1. Install [devcontainer](https://code.visualstudio.com/docs/devcontainers/containers)
 2. Open this project in dev container
 3. Run `poetry shell`
