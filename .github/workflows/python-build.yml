@@ -6,11 +6,13 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Upload Python Package
+name: Build Python Package
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "**" ]
 
 permissions:
   contents: read
@@ -34,10 +36,6 @@ jobs:
         cache: 'poetry'
     - run: poetry install --sync --no-interaction
     - run: poetry run pytest
-    - name: Build package
-      run: poetry build
-    - name: Publish package distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Test build package
+      run: poetry check
+    - run: poetry build
