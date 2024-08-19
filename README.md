@@ -20,28 +20,33 @@ poetry add simplestate
 
 Here's a basic example of using **simplestate**:
 
+m[`state`] + `action` >> `next_state`
+
 ```python
 from simplestate import StateMachine
 
 m = StateMachine("loading")          # Define the machine with an initial state
 m["loading"] + "error" >> "failed"   # Transition from loading to failed on "error"
-m["loading"] + "ok" >> "success"     # Transition from loading to success on "ok"
-m["?"] + "back" >> "loading"         # Any state transitions to loading on "back"
+m["loading"] + "ok"    >> "success"  # Transition from loading to success on "ok"
+m["?"]       + "back"  >> "loading"  # Any state transitions to loading on "back"
 
-m.add_callbacks({                    # Add handlers for entering states
-    "loading": lambda previous: print(f"{previous} >> loading"),
-    "failed": lambda previous, error: print(f"{previous} >> failed: {error}"),
-    "success": lambda previous: print(f"{previous} >> success"),
-})
-
-m.start()  # Start the machine, adjust inital state by this m.start(at_state="ok")
+# Start the machine
+m.start()  # adjust inital state by this m.start(at_state="ok")
 assert m.current == "loading"
 
-m.handle("error", error="Something went wrong")  # Trigger transitions
-assert m.current == "failed"
+# Trigger transitions
+m.handle("ok")
+assert m.current == "success"
 
 m.handle("back")
 assert m.current == "loading"
+
+m.handle("back")
+assert m.current == "loading"
+
+# Trigger transitions with context
+m.handle("error", error="Something went wrong")
+assert m.current == "failed"
 ```
 
 ## Why Simplestate?
@@ -51,6 +56,14 @@ The goal of **simplestate** is to keep finite state machines simple and focused.
 ### Event Handling on State Entry
 
 Simplestate allows event handling when entering a state using `.add_callbacks()`. These callbacks take `previous` and an optional `**input_context`.
+```python
+# Add handlers for entering states
+m.add_callbacks({
+    "loading": lambda previous: print(f"{previous} >> loading"),
+    "failed": lambda previous, error: print(f"{previous} >> failed: {error}"),
+    "success": lambda previous: print(f"{previous} >> success"),
+})
+```
 
 ## FAQ
 
@@ -72,11 +85,11 @@ A: Yes! Think of simplestate as a state manager. You can compose it within your 
 class TrafficLight:
     def __init__(self):
         brain = StateMachine("red")
-        brain["red"] + "next" >> "yellow_green"
+        brain["red"]          + "next" >> "yellow_green"
         brain["yellow_green"] + "next" >> "green"
-        brain["green"] + "next" >> "yellow_red"
-        brain["yellow_red"] + "next" >> "red"
-        brain.start("red")
+        brain["green"]        + "next" >> "yellow_red"
+        brain["yellow_red"]   + "next" >> "red"
+        brain.start()
 
         self.machine = brain
 
