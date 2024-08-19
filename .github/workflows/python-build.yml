@@ -39,3 +39,7 @@ jobs:
     - name: Test build package
       run: poetry check
     - run: poetry build
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}

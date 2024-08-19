@@ -37,3 +37,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
