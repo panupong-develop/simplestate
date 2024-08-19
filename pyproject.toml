@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "simplestate"
-version = "0.1.4"
+version = "0.1.5"
 description = "A simple stupid finite state machine."
 license = "Apache-2.0"
 authors = ["panupong-puttarathamrongkul <54784627+panupong-puttarathamrongkul@users.noreply.github.com>"]
