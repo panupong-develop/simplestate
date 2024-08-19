@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "simplestate"
-version = "0.1.4"
-description = "A simple stupid finite state machine."
+version = "0.1.5"
+description = "A simple stupid, declarative finite state machine for Python."
 license = "Apache-2.0"
 authors = ["panupong-puttarathamrongkul <54784627+panupong-puttarathamrongkul@users.noreply.github.com>"]
 readme = "README.md"

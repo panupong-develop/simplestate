@@ -10,10 +10,17 @@
 
 ## Installation
 
-To install simplestate, use poetry:
+To install simplestate, 
+
+use poetry:
 
 ```bash
 poetry add simplestate
+```
+
+use pip:
+```bash
+pip install simplestate
 ```
 
 ## Usage Example
@@ -60,7 +67,7 @@ Simplestate allows event handling when entering a state using `.add_callbacks()`
 # Add handlers for entering states
 m.add_callbacks({
     "loading": lambda previous: print(f"{previous} >> loading"),
-    "failed": lambda previous, error: print(f"{previous} >> failed: {error}"),
+    "failed": lambda previous, **input_context: print(f"{previous} >> failed: {input_context['error']}"),
     "success": lambda previous: print(f"{previous} >> success"),
 })
 ```
@@ -84,20 +91,36 @@ A: Yes! Think of simplestate as a state manager. You can compose it within your 
 ```python
 class TrafficLight:
     def __init__(self):
-        brain = StateMachine("red")
-        brain["red"]          + "next" >> "yellow_green"
-        brain["yellow_green"] + "next" >> "green"
-        brain["green"]        + "next" >> "yellow_red"
-        brain["yellow_red"]   + "next" >> "red"
-        brain.start()
+        m = StateMachine("red")
+        m["red"]    + "next" >> "green"
+        m["green"]  + "next" >> "yellow"
+        m["yellow"] + "next" >> "red"
+        m.start()
 
-        self.machine = brain
+        self.machine = m
 
     def display(self) -> str:
         return self.machine.current
 
     def next(self) -> None:
         self.machine.handle("next")
+
+if __name__ == '__main__':
+    light = TrafficLight()
+
+    while True:
+        state = light.display()
+        print(state)
+
+        # pause for a few seconds
+        match state:
+            case "red" | "green":
+                time.sleep(30)
+            case "yellow":
+                time.sleep(5)
+
+        # transition
+        light.next()
 ```
 
 ## Tests
