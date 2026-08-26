@@ -16,10 +16,12 @@ class StateNode(Generic[E]):
         fn: StateFn,
         transitions: dict[str, dict[str, StateFn]],
         error_routes: list[tuple[ExcTypes, StateFn]],
+        initial: str,
     ):
         self._fn = fn
         self._transitions = transitions
         self._error_routes = error_routes
+        self._initial = initial
         self._gen: Generator[None, str, Any] | None = None
         self._result: Any = None  # plain state's enter return, carried on exit
         self._stale = False
@@ -35,7 +37,7 @@ class StateNode(Generic[E]):
         return f"<state: {self.value}>"
 
     def print_graph(self) -> None:
-        lines = [f"current: {self.value}"]
+        lines = [f"current: {self.value}", f"  ● --start--> {self._initial}"]
         targets: list[str] = []
         for src, events in self._transitions.items():
             for event, goto in events.items():
@@ -46,7 +48,7 @@ class StateNode(Generic[E]):
         for name in targets:
             if name not in self._transitions:
                 marker = ">" if name == self.value else " "
-                lines.append(f"{marker} {name} (terminal)")
+                lines.append(f"{marker} {name} --> ◉")
         print("\n".join(lines))
 
     def _enter(self, prev: str, **ctx: Any) -> None:
@@ -68,7 +70,7 @@ class StateNode(Generic[E]):
         return self._result
 
     def _spawn(self, fn: StateFn) -> "StateNode[E]":
-        return StateNode(fn, self._transitions, self._error_routes)
+        return StateNode(fn, self._transitions, self._error_routes, self._initial)
 
     def handle(self, event: E, **ctx: Any) -> "StateNode[E]":
         if self._stale:
@@ -137,6 +139,8 @@ class StateMachineBuilder(Generic[E]):
             raise InvalidGraphError(
                 f"initial state '{initial.__name__}' is not a known state"
             )
-        node = StateNode(initial, self._transitions, self._error_routes)
+        node = StateNode(
+            initial, self._transitions, self._error_routes, initial.__name__
+        )
         node._enter("")
         return node

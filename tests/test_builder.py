@@ -358,10 +358,11 @@ def test_print_graph(capsys):
 
     assert capsys.readouterr().out == (
         "current: uploading\n"
+        "  ● --start--> idle\n"
         "  idle --upload--> uploading\n"
         "> uploading --ok--> done\n"
         "> uploading --error--> failed\n"
         "  failed --retry--> uploading\n"
         "  ... --cancel--> idle\n"
-        "  done (terminal)\n"
+        "  done --> ◉\n"
     )
