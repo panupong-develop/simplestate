@@ -293,6 +293,51 @@ def test_repr_shows_state_name():
     assert repr(state) == "<state: idle>"
 
 
+def test_generator_return_value_carried_to_next_state():
+    def uploading(prev, **ctx):
+        yield
+        return {"bytes": 42}  # handed to whatever state comes next
+
+    def done(prev, prev_returned, **ctx):
+        assert prev_returned == {"bytes": 42}
+
+    state = (
+        StateMachineBuilder()
+        .at(uploading).on("ok", goto=done)
+        .build(initial=uploading)
+    )
+    assert state.handle("ok").value == "done"
+
+
+def test_plain_function_return_value_carried_to_next_state():
+    def idle(prev, **ctx):
+        return "session-token"  # plain state: enter's return is carried on exit
+
+    def working(prev, prev_returned, **ctx):
+        assert prev_returned == "session-token"
+
+    state = (
+        StateMachineBuilder()
+        .at(idle).on("go", goto=working)
+        .build(initial=idle)
+    )
+    assert state.handle("go").value == "working"
+
+
+def test_no_return_value_means_no_prev_returned_key():
+    def idle(prev, **ctx): ...
+
+    def working(prev, **ctx):
+        assert "prev_returned" not in ctx
+
+    state = (
+        StateMachineBuilder()
+        .at(idle).on("go", goto=working)
+        .build(initial=idle)
+    )
+    state.handle("go")
+
+
 def test_print_graph(capsys):
     def idle(prev, **ctx): ...
     def uploading(prev, **ctx): ...

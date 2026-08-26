@@ -20,7 +20,8 @@ class StateNode(Generic[E]):
         self._fn = fn
         self._transitions = transitions
         self._error_routes = error_routes
-        self._gen: Generator[None, str, None] | None = None
+        self._gen: Generator[None, str, Any] | None = None
+        self._result: Any = None  # plain state's enter return, carried on exit
         self._stale = False
 
     @property
@@ -53,15 +54,18 @@ class StateNode(Generic[E]):
             self._gen = self._fn(prev, **ctx)
             next(self._gen)  # run enter, park at yield
         else:
-            self._fn(prev, **ctx)
+            self._result = self._fn(prev, **ctx)
 
-    def _exit(self, next_value: str) -> None:
+    def _exit(self, next_value: str) -> Any:
+        """Run exit; return the value this state hands to the next one."""
         if self._gen is not None:
+            gen, self._gen = self._gen, None
             try:
-                self._gen.send(next_value)  # run exit
-            except StopIteration:
-                pass
-            self._gen = None
+                gen.send(next_value)  # run exit
+            except StopIteration as stop:
+                return stop.value  # generator's `return x`
+            return None
+        return self._result
 
     def _spawn(self, fn: StateFn) -> "StateNode[E]":
         return StateNode(fn, self._transitions, self._error_routes)
@@ -77,8 +81,10 @@ class StateNode(Generic[E]):
                 raise UnknownEventError(
                     f"state '{self.value}' has no transition for event '{event}'"
                 )
-            self._exit(target.__name__)
+            carried = self._exit(target.__name__)
             self._stale = True
+            if carried is not None:
+                ctx.setdefault("prev_returned", carried)
             node = self._spawn(target)
             node._enter(self.value, **ctx)
             return node
