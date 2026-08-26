@@ -89,6 +89,25 @@ face. API:
   enter (passing `prev` and `**ctx`), and returns the **next state node**
   (functional style; the caller reassigns).
 
+### Carrying values between states
+
+A state can hand a value to its successor. A generator state uses `return x`
+after its `yield`; a plain state's enter return value is carried when it
+exits. The next state receives it as `prev_returned` in its context —
+injected only when the value is not `None`, so states that send nothing keep
+clean signatures. An explicit `prev_returned=` passed to `handle()` wins over
+the carried value. This mirrors `on_error`, where the exception arrives as
+`error=`.
+
+```python
+def uploading(prev, **ctx):
+    yield
+    return {"bytes": 42}          # handed forward
+
+def done(prev, prev_returned, **ctx):
+    print(prev_returned)          # {'bytes': 42}
+```
+
 ### Error behavior
 
 Exception classes live in `simplestate/exceptions.py` and are imported from
