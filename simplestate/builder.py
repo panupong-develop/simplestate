@@ -59,13 +59,13 @@ class StateNode(Generic[E]):
                     lines.append(f"{prefix}{branch}{event} --> [{tgt}]{suffix(tgt)}")
                     walk(tgt, prefix + ("    " if last else "\u2502   "))
 
-        lines.append(f"\u25cf {self._initial}{suffix(self._initial)}")
+        lines.append(f"\u25cf [{self._initial}]{suffix(self._initial)}")
         walk(self._initial, "")
         wildcard = self._transitions.get(_ANY, {})
         if wildcard:
             lines += ["", "any state:"]
             for event, goto in wildcard.items():
-                lines.append(f"\t{event} --> {goto.__name__}")
+                lines.append(f"\t{event} --> [{goto.__name__}]")
         print("\n".join(lines))
 
     def _enter(self, prev: str, **ctx: Any) -> None:
