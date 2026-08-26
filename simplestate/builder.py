@@ -1,15 +1,16 @@
 import inspect
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, Generic, TypeVar
 
 from .exceptions import InvalidGraphError, StaleStateError, UnknownEventError
 
 StateFn = Callable[..., Any]
+E = TypeVar("E", bound=str)  # event type, e.g. Literal["upload", "ok"]
 ExcTypes = Any  # an exception type or a PEP 604 union of them
 
 _ANY = "?"  # reserved transitions key for at_any()
 
 
-class StateNode:
+class StateNode(Generic[E]):
     def __init__(
         self,
         fn: StateFn,
@@ -29,6 +30,9 @@ class StateNode:
     def __str__(self) -> str:
         return self.value
 
+    def __repr__(self) -> str:
+        return f"<state: {self.value}>"
+
     def _enter(self, prev: str, **ctx: Any) -> None:
         if inspect.isgeneratorfunction(self._fn):
             self._gen = self._fn(prev, **ctx)
@@ -44,10 +48,10 @@ class StateNode:
                 pass
             self._gen = None
 
-    def _spawn(self, fn: StateFn) -> "StateNode":
+    def _spawn(self, fn: StateFn) -> "StateNode[E]":
         return StateNode(fn, self._transitions, self._error_routes)
 
-    def handle(self, event: str, **ctx: Any) -> "StateNode":
+    def handle(self, event: E, **ctx: Any) -> "StateNode[E]":
         if self._stale:
             raise StaleStateError(f"'{self.value}' node already transitioned out")
         target = self._transitions.get(self.value, {}).get(
@@ -79,35 +83,35 @@ class StateNode:
         return None
 
 
-class StateMachineBuilder:
+class StateMachineBuilder(Generic[E]):
     def __init__(self, *states: StateFn):
         self._known = {fn.__name__ for fn in states}
         self._transitions: dict[str, dict[str, StateFn]] = {}
         self._error_routes: list[tuple[ExcTypes, StateFn]] = []
         self._at: str | None = None
 
-    def at(self, state: StateFn) -> "StateMachineBuilder":
+    def at(self, state: StateFn) -> "StateMachineBuilder[E]":
         self._known.add(state.__name__)
         self._at = state.__name__
         return self
 
-    def at_any(self) -> "StateMachineBuilder":
+    def at_any(self) -> "StateMachineBuilder[E]":
         self._at = _ANY
         return self
 
-    def on(self, event: str, goto: StateFn) -> "StateMachineBuilder":
+    def on(self, event: E, goto: StateFn) -> "StateMachineBuilder[E]":
         if self._at is None:
             raise InvalidGraphError("on() requires a preceding at() or at_any()")
         self._known.add(goto.__name__)
         self._transitions.setdefault(self._at, {})[event] = goto
         return self
 
-    def on_error(self, exc_types: ExcTypes, goto: StateFn) -> "StateMachineBuilder":
+    def on_error(self, exc_types: ExcTypes, goto: StateFn) -> "StateMachineBuilder[E]":
         self._known.add(goto.__name__)
         self._error_routes.append((exc_types, goto))
         return self
 
-    def build(self, initial: StateFn) -> StateNode:
+    def build(self, initial: StateFn) -> StateNode[E]:
         if initial.__name__ not in self._known:
             raise InvalidGraphError(
                 f"initial state '{initial.__name__}' is not a known state"

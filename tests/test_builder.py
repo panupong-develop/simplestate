@@ -270,3 +270,24 @@ def test_on_before_at_raises():
 
     with pytest.raises(InvalidGraphError, match="at\\(\\)"):
         StateMachineBuilder(idle).on("upload", goto=idle)
+
+
+def test_builder_supports_event_type_subscription():
+    from typing import Literal
+
+    def idle(prev, **ctx): ...
+    def done(prev, **ctx): ...
+
+    state = (
+        StateMachineBuilder[Literal["finish"]](idle, done)
+        .at(idle).on("finish", goto=done)
+        .build(initial=idle)
+    )
+    assert state.handle("finish").value == "done"
+
+
+def test_repr_shows_state_name():
+    def idle(prev, **ctx): ...
+
+    state = StateMachineBuilder(idle).build(initial=idle)
+    assert repr(state) == "<state: idle>"
