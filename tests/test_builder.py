@@ -291,3 +291,31 @@ def test_repr_shows_state_name():
 
     state = StateMachineBuilder(idle).build(initial=idle)
     assert repr(state) == "<state: idle>"
+
+
+def test_print_graph(capsys):
+    def idle(prev, **ctx): ...
+    def uploading(prev, **ctx): ...
+    def failed(prev, **ctx): ...
+    def done(prev, **ctx): ...
+
+    state = (
+        StateMachineBuilder(idle)
+        .at(idle).on("upload", goto=uploading)
+        .at(uploading).on("ok", goto=done).on("error", goto=failed)
+        .at(failed).on("retry", goto=uploading)
+        .at_any().on("cancel", goto=idle)
+        .build(initial=idle)
+        .handle("upload")
+    )
+
+    state.print_graph()
+
+    assert capsys.readouterr().out == (
+        "  idle --upload--> uploading\n"
+        "> uploading --ok--> done\n"
+        "> uploading --error--> failed\n"
+        "  failed --retry--> uploading\n"
+        "  ... --cancel--> idle\n"
+        "  done (terminal)\n"
+    )

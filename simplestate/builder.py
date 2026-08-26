@@ -7,7 +7,7 @@ StateFn = Callable[..., Any]
 E = TypeVar("E", bound=str)  # event type, e.g. Literal["upload", "ok"]
 ExcTypes = Any  # an exception type or a PEP 604 union of them
 
-_ANY = "?"  # reserved transitions key for at_any()
+_ANY = "..."  # reserved transitions key for at_any()
 
 
 class StateNode(Generic[E]):
@@ -32,6 +32,21 @@ class StateNode(Generic[E]):
 
     def __repr__(self) -> str:
         return f"<state: {self.value}>"
+
+    def print_graph(self) -> None:
+        lines = []
+        targets: list[str] = []
+        for src, events in self._transitions.items():
+            for event, goto in events.items():
+                marker = ">" if src == self.value else " "
+                lines.append(f"{marker} {src} --{event}--> {goto.__name__}")
+                if goto.__name__ not in targets:
+                    targets.append(goto.__name__)
+        for name in targets:
+            if name not in self._transitions:
+                marker = ">" if name == self.value else " "
+                lines.append(f"{marker} {name} (terminal)")
+        print("\n".join(lines))
 
     def _enter(self, prev: str, **ctx: Any) -> None:
         if inspect.isgeneratorfunction(self._fn):
