@@ -54,7 +54,7 @@ class StateNode(Generic[E]):
                 tgt = goto.__name__
                 branch = "\u2514\u2500\u2500 " if last else "\u251c\u2500\u2500 "
                 if tgt in visited:
-                    lines.append(f"{prefix}{branch}{event} --> {tgt} \u21ba")
+                    lines.append(f"{prefix}{branch}{event} --> [{tgt}] \u21ba")
                 else:
                     lines.append(f"{prefix}{branch}{event} --> [{tgt}]{suffix(tgt)}")
                     walk(tgt, prefix + ("    " if last else "\u2502   "))
