@@ -359,12 +359,12 @@ def test_print_graph(capsys):
     assert capsys.readouterr().out == (
         "current: uploading\n"
         "\n"
-        "● idle\n"
-        "└── upload --> uploading *\n"
-        "    ├── ok --> done ◉\n"
-        "    └── error --> failed\n"
-        "        └── retry --> uploading ↺\n"
+        "● [idle]\n"
+        "└── upload --> [uploading] *\n"
+        "    ├── ok --> [done] ◉\n"
+        "    └── error --> [failed]\n"
+        "        └── retry --> [uploading] ↺\n"
         "\n"
         "any state:\n"
-        "\tcancel --> idle\n"
+        "\tcancel --> [idle]\n"
     )

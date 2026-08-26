@@ -56,7 +56,7 @@ class StateNode(Generic[E]):
                 if tgt in visited:
                     lines.append(f"{prefix}{branch}{event} --> {tgt} \u21ba")
                 else:
-                    lines.append(f"{prefix}{branch}{event} --> {tgt}{suffix(tgt)}")
+                    lines.append(f"{prefix}{branch}{event} --> [{tgt}]{suffix(tgt)}")
                     walk(tgt, prefix + ("    " if last else "\u2502   "))
 
         lines.append(f"\u25cf {self._initial}{suffix(self._initial)}")
