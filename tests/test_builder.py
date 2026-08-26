@@ -1,7 +1,11 @@
 import pytest
 
 from simplestate import StateMachineBuilder
-from simplestate.exceptions import UnknownEventError
+from simplestate.exceptions import (
+    InvalidGraphError,
+    StaleStateError,
+    UnknownEventError,
+)
 
 
 def test_build_returns_initial_node_and_runs_enter():
@@ -68,3 +72,65 @@ def test_unhandled_event_raises_unknown_event_error():
 
     with pytest.raises(UnknownEventError, match="idle.*nope"):
         state.handle("nope")
+
+
+def test_at_any_wildcard_with_state_priority():
+    def idle(prev, **ctx): ...
+    def uploading(prev, **ctx): ...
+    def paused(prev, **ctx): ...
+
+    state = (
+        StateMachineBuilder(idle, uploading, paused)
+        .at(idle).on("upload", goto=uploading)
+        .at(uploading).on("cancel", goto=paused)  # state-specific beats wildcard
+        .at_any().on("cancel", goto=idle)
+        .build(initial=idle)
+    )
+
+    state = state.handle("upload")
+    assert state.handle("cancel").value == "paused"  # specific wins
+
+    state = StateMachineBuilder(idle, uploading, paused) \
+        .at(idle).on("upload", goto=uploading) \
+        .at_any().on("cancel", goto=idle) \
+        .build(initial=idle) \
+        .handle("upload")
+    assert state.handle("cancel").value == "idle"  # wildcard applies
+
+
+def test_stale_node_raises():
+    def idle(prev, **ctx): ...
+    def done(prev, **ctx): ...
+
+    state = (
+        StateMachineBuilder(idle, done)
+        .at(idle).on("finish", goto=done)
+        .at(done).on("reset", goto=idle)
+        .build(initial=idle)
+    )
+
+    state.handle("finish")  # `state` has now transitioned out
+
+    with pytest.raises(StaleStateError, match="idle"):
+        state.handle("finish")
+
+
+def test_build_rejects_unknown_initial():
+    def idle(prev, **ctx): ...
+    def stranger(prev, **ctx): ...
+
+    with pytest.raises(InvalidGraphError, match="stranger"):
+        StateMachineBuilder(idle).build(initial=stranger)
+
+
+def test_goto_targets_are_auto_registered():
+    def idle(prev, **ctx): ...
+    def uploading(prev, **ctx): ...
+
+    # uploading not in constructor, but referenced via goto — valid as initial
+    state = (
+        StateMachineBuilder(idle)
+        .at(idle).on("upload", goto=uploading)
+        .build(initial=uploading)
+    )
+    assert state.value == "uploading"
