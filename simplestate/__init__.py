@@ -1,5 +1,5 @@
-from .state_machine import StateMachine
+from .builder import StateMachineBuilder
 
 __all__ = [
-    "StateMachine",
+    "StateMachineBuilder",
 ]
