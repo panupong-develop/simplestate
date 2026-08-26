@@ -89,11 +89,10 @@ face. API:
   enter (passing `prev` and `**ctx`), and returns the **next state node**
   (functional style; the caller reassigns).
 
-### Error behavior (fail loudly)
+### Error behavior
 
-Each error case gets its own exception class, all under one base, in a
-dedicated `simplestate/exceptions.py` — so callers can catch a specific case
-or the whole family:
+Exception classes live in `simplestate/exceptions.py` and are imported from
+there (`from simplestate.exceptions import ...`), not from the package root:
 
 ```python
 class SimplestateError(Exception): ...
@@ -102,16 +101,28 @@ class UnknownEventError(SimplestateError): ...   # raised by handle()
 class StaleStateError(SimplestateError): ...     # raised by handle()
 ```
 
-- Unhandled event: `handle()` raises `UnknownEventError` (old behavior was
-  silent ignore; `.at_any()` covers deliberate catch-alls). Carries the
-  state name and event.
-- Stale node: calling `handle()` on a node that has already transitioned out
-  raises `StaleStateError` — its exit already ran; history does not fork.
-- Invalid graph (dangling `goto`, unknown initial): `build()` raises
-  `InvalidGraphError`.
+**Fluent error routing.** Error handling is declared on the builder, not
+try/excepted at call sites:
 
-All exceptions are exported from the package root alongside
-`StateMachineBuilder`.
+```python
+.on_error(TimeoutError, goto=failed)
+.on_error(UnknownEventError, goto=idle)
+```
+
+- When a registered exception type is raised inside a state function (enter
+  or exit), or when the machine would raise `UnknownEventError`, the machine
+  routes to the `goto` state instead, passing the exception as `error=` in
+  the context. First registered `isinstance` match wins.
+- Unregistered exception types propagate normally.
+- An exception raised while entering the error-route state itself propagates
+  (no recursive routing).
+- Not routable (always raise, programming errors): `StaleStateError` —
+  `handle()` on a node that has already transitioned out (its exit already
+  ran; history does not fork) — and `InvalidGraphError` from `build()`
+  (unknown initial state, or an `on_error` goto that is not a known state).
+- With no `on_error` registered for it, an unhandled event raises
+  `UnknownEventError` (old behavior was silent ignore; `.at_any()` covers
+  deliberate catch-alls). Carries the state name and event.
 
 ## What is removed
 
