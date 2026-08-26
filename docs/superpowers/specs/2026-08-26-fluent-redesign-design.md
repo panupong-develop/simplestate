@@ -105,9 +105,13 @@ class StaleStateError(SimplestateError): ...     # raised by handle()
 try/excepted at call sites:
 
 ```python
-.on_error(TimeoutError, goto=failed)
+.on_error(TimeoutError | ConnectionError, goto=failed)   # unions welcome
 .on_error(UnknownEventError, goto=idle)
 ```
+
+`on_error` accepts a single exception type or a PEP 604 union
+(`A | B`); matching is a plain `isinstance` check, which supports unions
+natively since Python 3.10.
 
 - When a registered exception type is raised inside a state function (enter
   or exit), or when the machine would raise `UnknownEventError`, the machine
