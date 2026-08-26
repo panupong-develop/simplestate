@@ -37,69 +37,35 @@ class StateNode(Generic[E]):
         return f"<state: {self.value}>"
 
     def print_graph(self) -> None:
-        # ponytail: BFS-tree layout — tree edges drawn, the rest listed below;
-        # real edge routing if machines ever outgrow this.
-        tree: dict[str, list[tuple[str, str]]] = {}
-        extra: list[str] = []
-        layers: list[list[str]] = [[self._initial]]
-        seen = {self._initial}
-        frontier = [self._initial]
-        while frontier:
-            nxt: list[str] = []
-            for src in frontier:
-                for event, goto in self._transitions.get(src, {}).items():
-                    tgt = goto.__name__
-                    if tgt not in seen:
-                        seen.add(tgt)
-                        nxt.append(tgt)
-                        tree.setdefault(src, []).append((event, tgt))
-                    else:
-                        extra.append(f"\t{src} --{event}--> {tgt}")
-            if nxt:
-                layers.append(nxt)
-            frontier = nxt
-
-        center: dict[str, int] = {}
-        boxes: list[tuple[str, str, str]] = []
-        for layer in layers:
-            top, mid, bottom = "", "", ""
-            x = 0
-            for name in layer:
-                label = f"{name} *" if name == self.value else name
-                width = len(label) + 4
-                pad = " " * (x - len(top))
-                top += pad + "┌" + "─" * (width - 2) + "┐"
-                mid += pad + f"│ {label} │"
-                bottom += pad + "└" + "─" * (width - 2) + "┘"
-                center[name] = x + width // 2
-                x += width + 2
-            boxes.append((top, mid, bottom))
-
         lines = [f"current: {self.value}", ""]
-        for i, layer in enumerate(layers):
-            if i == 0:
-                c = center[layer[0]]
-                lines += [" " * c + "●", " " * c + "│"]
-            lines += list(boxes[i])
-            arrows = ""
-            for src in layer:
-                for event, tgt in tree.get(src, []):
-                    c = center[tgt]
-                    lines.append(" " * c + "│ " + event)
-                    arrows += " " * (c - len(arrows)) + "▼"
-            if arrows:
-                lines.append(arrows)
-            for name in layer:
-                if name not in self._transitions:  # terminal
-                    c = center[name]
-                    lines += [" " * c + "│", " " * c + "◉"]
-        if extra:
-            lines += ["", "edges not drawn:"] + extra
+        visited: set[str] = set()
+
+        def suffix(name: str) -> str:
+            s = " *" if name == self.value else ""
+            if name not in self._transitions:  # no outgoing: terminal
+                s += " \u25c9"
+            return s
+
+        def walk(name: str, prefix: str) -> None:
+            visited.add(name)
+            edges = list(self._transitions.get(name, {}).items())
+            for i, (event, goto) in enumerate(edges):
+                last = i == len(edges) - 1
+                tgt = goto.__name__
+                branch = "\u2514\u2500\u2500 " if last else "\u251c\u2500\u2500 "
+                if tgt in visited:
+                    lines.append(f"{prefix}{branch}{event} --> {tgt} \u21ba")
+                else:
+                    lines.append(f"{prefix}{branch}{event} --> {tgt}{suffix(tgt)}")
+                    walk(tgt, prefix + ("    " if last else "\u2502   "))
+
+        lines.append(f"\u25cf {self._initial}{suffix(self._initial)}")
+        walk(self._initial, "")
         wildcard = self._transitions.get(_ANY, {})
         if wildcard:
-            lines.append("any state:" if extra else "\nany state:")
+            lines += ["", "any state:"]
             for event, goto in wildcard.items():
-                lines.append(f"\t{_ANY} --{event}--> {goto.__name__}")
+                lines.append(f"\t{event} --> {goto.__name__}")
         print("\n".join(lines))
 
     def _enter(self, prev: str, **ctx: Any) -> None:
