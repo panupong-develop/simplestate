@@ -57,10 +57,13 @@ class StateNode(Generic[E]):
                     lines.append(f"{prefix}{branch}{event} --> [{tgt}] \u21ba")
                 else:
                     lines.append(f"{prefix}{branch}{event} --> [{tgt}]{suffix(tgt)}")
-                    walk(tgt, prefix + ("    " if last else "\u2502   "))
+                    # children hang under the [state], not under the event
+                    indent = len(branch) + len(event) + len(" --> ")
+                    bar = " " * indent if last else "\u2502" + " " * (indent - 1)
+                    walk(tgt, prefix + bar)
 
         lines.append(f"\u25cf [{self._initial}]{suffix(self._initial)}")
-        walk(self._initial, "")
+        walk(self._initial, "  ")
         wildcard = self._transitions.get(_ANY, {})
         if wildcard:
             lines += ["", "any state:"]
