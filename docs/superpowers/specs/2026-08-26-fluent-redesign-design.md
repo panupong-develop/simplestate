@@ -91,11 +91,27 @@ face. API:
 
 ### Error behavior (fail loudly)
 
+Each error case gets its own exception class, all under one base, in a
+dedicated `simplestate/exceptions.py` — so callers can catch a specific case
+or the whole family:
+
+```python
+class SimplestateError(Exception): ...
+class InvalidGraphError(SimplestateError): ...   # raised by build()
+class UnknownEventError(SimplestateError): ...   # raised by handle()
+class StaleStateError(SimplestateError): ...     # raised by handle()
+```
+
 - Unhandled event: `handle()` raises `UnknownEventError` (old behavior was
-  silent ignore; `.at_any()` covers deliberate catch-alls).
+  silent ignore; `.at_any()` covers deliberate catch-alls). Carries the
+  state name and event.
 - Stale node: calling `handle()` on a node that has already transitioned out
   raises `StaleStateError` — its exit already ran; history does not fork.
-- Invalid graph: `build()` raises `ValueError`.
+- Invalid graph (dangling `goto`, unknown initial): `build()` raises
+  `InvalidGraphError`.
+
+All exceptions are exported from the package root alongside
+`StateMachineBuilder`.
 
 ## What is removed
 
