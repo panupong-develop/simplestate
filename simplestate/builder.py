@@ -37,18 +37,19 @@ class StateNode(Generic[E]):
         return f"<state: {self.value}>"
 
     def print_graph(self) -> None:
-        lines = [f"current: {self.value}", f"  ● --start--> {self._initial}"]
+        lines = [f"current: {self.value}", "", f"● --> {self._initial}"]
         targets: list[str] = []
         for src, events in self._transitions.items():
+            marker = "*" if src == self.value else " "
+            lines += ["", f"{marker} {src}:"]
             for event, goto in events.items():
-                marker = ">" if src == self.value else " "
-                lines.append(f"{marker} {src} --{event}--> {goto.__name__}")
+                lines.append(f"\t{event} --> {goto.__name__}")
                 if goto.__name__ not in targets:
                     targets.append(goto.__name__)
         for name in targets:
             if name not in self._transitions:
-                marker = ">" if name == self.value else " "
-                lines.append(f"{marker} {name} --> ◉")
+                marker = "*" if name == self.value else " "
+                lines += ["", f"{marker} {name}:", "\t--> ◉"]
         print("\n".join(lines))
 
     def _enter(self, prev: str, **ctx: Any) -> None:
