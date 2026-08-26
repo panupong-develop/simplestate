@@ -35,7 +35,7 @@ class StateNode(Generic[E]):
         return f"<state: {self.value}>"
 
     def print_graph(self) -> None:
-        lines = []
+        lines = [f"current: {self.value}"]
         targets: list[str] = []
         for src, events in self._transitions.items():
             for event, goto in events.items():
