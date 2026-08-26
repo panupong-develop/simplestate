@@ -134,3 +134,139 @@ def test_goto_targets_are_auto_registered():
         .build(initial=uploading)
     )
     assert state.value == "uploading"
+
+
+def test_on_error_routes_exception_from_state_function():
+    def idle(prev, **ctx): ...
+
+    def uploading(prev, **ctx):
+        raise TimeoutError("upload timed out")
+
+    def failed(prev, error, **ctx):
+        assert isinstance(error, TimeoutError)
+
+    state = (
+        StateMachineBuilder(idle, uploading, failed)
+        .at(idle).on("upload", goto=uploading)
+        .at(failed).on("retry", goto=uploading)
+        .on_error(TimeoutError, goto=failed)
+        .build(initial=idle)
+    )
+
+    state = state.handle("upload")  # uploading raises -> routed, not raised
+    assert state.value == "failed"
+
+
+def test_unregistered_exception_propagates():
+    def idle(prev, **ctx): ...
+
+    def uploading(prev, **ctx):
+        raise ValueError("boom")
+
+    state = (
+        StateMachineBuilder(idle, uploading)
+        .at(idle).on("upload", goto=uploading)
+        .on_error(TimeoutError, goto=idle)
+        .build(initial=idle)
+    )
+
+    with pytest.raises(ValueError, match="boom"):
+        state.handle("upload")
+
+
+def test_on_error_accepts_union():
+    def idle(prev, **ctx): ...
+
+    def uploading(prev, **ctx):
+        raise ConnectionError("net down")
+
+    def failed(prev, error, **ctx): ...
+
+    state = (
+        StateMachineBuilder(idle, uploading, failed)
+        .at(idle).on("upload", goto=uploading)
+        .on_error(TimeoutError | ConnectionError, goto=failed)
+        .build(initial=idle)
+    )
+
+    assert state.handle("upload").value == "failed"
+
+
+def test_on_error_routes_unknown_event():
+    def idle(prev, **ctx): ...
+    def lost(prev, error, **ctx): ...
+
+    state = (
+        StateMachineBuilder(idle, lost)
+        .on_error(UnknownEventError, goto=lost)
+        .build(initial=idle)
+    )
+
+    assert state.handle("nonsense").value == "lost"
+
+
+def test_exception_in_error_state_propagates_no_recursion():
+    def idle(prev, **ctx): ...
+
+    def uploading(prev, **ctx):
+        raise TimeoutError("first")
+
+    def failed(prev, error, **ctx):
+        raise TimeoutError("second")  # registered type, but must NOT re-route
+
+    state = (
+        StateMachineBuilder(idle, uploading, failed)
+        .at(idle).on("upload", goto=uploading)
+        .on_error(TimeoutError, goto=failed)
+        .build(initial=idle)
+    )
+
+    with pytest.raises(TimeoutError, match="second"):
+        state.handle("upload")
+
+
+def test_context_is_forwarded_to_enter():
+    seen = {}
+
+    def idle(prev, **ctx): ...
+
+    def failed(prev, reason, attempt):
+        seen.update(reason=reason, attempt=attempt)
+
+    state = (
+        StateMachineBuilder(idle, failed)
+        .at(idle).on("error", goto=failed)
+        .build(initial=idle)
+    )
+
+    state.handle("error", reason="timeout", attempt=3)
+    assert seen == {"reason": "timeout", "attempt": 3}
+
+
+def test_generator_is_fresh_per_visit():
+    visits = []
+
+    def working(prev, **ctx):
+        local = len(visits)  # captured at enter
+        visits.append("enter")
+        yield
+        visits.append(f"exit-{local}")
+
+    def rest(prev, **ctx): ...
+
+    state = (
+        StateMachineBuilder(working, rest)
+        .at(working).on("pause", goto=rest)
+        .at(rest).on("resume", goto=working)
+        .build(initial=working)
+    )
+
+    state = state.handle("pause").handle("resume").handle("pause")
+    assert visits == ["enter", "exit-0", "enter", "exit-2"]
+
+
+def test_on_before_at_raises():
+    def idle(prev, **ctx): ...
+
+    with pytest.raises(InvalidGraphError, match="at\\(\\)"):
+        StateMachineBuilder(idle).on("upload", goto=idle)
